@@ -17,6 +17,7 @@ import { Badge } from "@/src/components/ui/badge"
 import { createClient } from '@/lib/supabase/client'
 import { QuestionWithAlternatives } from '@/lib/types/database'
 import { Plus, X, Save, Loader2 } from 'lucide-react'
+import { toast } from "sonner"
 
 interface Alternative {
   id?: string
@@ -151,12 +152,12 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
 
   const handleSave = async () => {
     if (!formData.title.trim()) {
-      alert('Título é obrigatório')
+      toast.error('Título é obrigatório')
       return
     }
 
     if (formData.type !== 'open_text' && alternatives.some(alt => !alt.text.trim())) {
-      alert('Todas as alternativas devem ter texto')
+      toast.error('Todas as alternativas devem ter texto')
       return
     }
 
@@ -191,8 +192,7 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
           .eq('id', question.id)
 
         if (questionError) {
-          console.error('Erro ao atualizar pergunta:', questionError)
-          alert('Erro ao atualizar pergunta')
+          toast.error('Erro ao atualizar pergunta')
           return
         }
 
@@ -206,8 +206,7 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
               .in('id', toDeleteIds)
 
             if (deleteError) {
-              console.error('Erro ao deletar alternativas:', deleteError)
-              alert('Erro ao deletar alternativas')
+              toast.error('Erro ao deletar alternativas')
               return
             }
           }
@@ -217,7 +216,6 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
             const currentAlt = alternatives.find(alt => alt.id === altId)
             if (currentAlt && currentAlt.text.trim()) {
               const newOrderIndex = alternatives.filter(alt => alt.text.trim()).indexOf(currentAlt) + 1
-              console.log('✏️ Atualizando alternativa:', altId, currentAlt.text, 'order:', newOrderIndex)
               
               const { error: updateError } = await supabase
                 .from('alternatives')
@@ -229,8 +227,7 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
                 .eq('id', altId)
 
               if (updateError) {
-                console.error('❌ Erro ao atualizar alternativa:', updateError)
-                alert('Erro ao atualizar alternativa')
+                toast.error('Erro ao atualizar alternativa')
                 return
               }
             }
@@ -239,7 +236,6 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
           // 3. INSERIR novas alternativas
           const validInsertAlternatives = toInsertAlternatives.filter(alt => alt.text.trim())
           if (validInsertAlternatives.length > 0) {
-            console.log('➕ Inserindo novas alternativas:', validInsertAlternatives.map(alt => alt.text))
             const alternativesToInsert = validInsertAlternatives.map((alt, index) => ({
               question_id: question.id,
               text: alt.text.trim(),
@@ -252,24 +248,18 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
               .insert(alternativesToInsert)
 
             if (insertError) {
-              console.error('❌ Erro ao inserir alternativas:', insertError)
-              alert('Erro ao inserir alternativas')
+              toast.error('Erro ao inserir alternativas')
               return
             }
           }
-
-          console.log('✅ Todas as operações executadas com sucesso!')
         } else {
           // Se mudou para open_text, remover todas as alternativas
-          console.log('🗑️ Removendo alternativas (mudou para texto aberto)')
           await supabase
             .from('alternatives')
             .delete()
             .eq('question_id', question.id)
         }
       } else {
-        console.log('➕ Criando nova pergunta...')
-        
         // Criar nova pergunta
         const { data: newQuestion, error: questionError } = await supabase
           .from('questions')
@@ -285,17 +275,12 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
           .single()
 
         if (questionError || !newQuestion) {
-          console.error('❌ Erro ao criar pergunta:', questionError)
-          alert('Erro ao criar pergunta')
+          toast.error('Erro ao criar pergunta')
           return
         }
 
-        console.log('✅ Nova pergunta criada:', newQuestion.id)
-
         // Inserir alternativas se não for open_text
         if (formData.type !== 'open_text') {
-          console.log('➕ Inserindo alternativas da nova pergunta...')
-          
           const alternativesToInsert = alternatives
             .filter(alt => alt.text.trim())
             .map((alt, index) => ({
@@ -311,22 +296,18 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
               .insert(alternativesToInsert)
 
             if (altError) {
-              console.error('❌ Erro ao inserir alternativas:', altError)
-              alert('Erro ao salvar alternativas')
+              toast.error('Erro ao salvar alternativas')
               return
             }
-
-            console.log('✅ Alternativas da nova pergunta inseridas:', alternativesToInsert.length)
           }
         }
       }
 
-      console.log('🎉 Salvamento concluído com sucesso!')
+      toast.success(question ? 'Pergunta atualizada com sucesso!' : 'Pergunta criada com sucesso!')
       onSave()
       onClose()
     } catch (error) {
-      console.error('Erro inesperado:', error)
-      alert('Erro inesperado')
+      toast.error('Erro inesperado')
     } finally {
       setIsLoading(false)
     }
