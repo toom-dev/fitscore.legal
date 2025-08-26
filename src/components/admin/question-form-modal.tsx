@@ -198,23 +198,15 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
 
         // Atualizar alternativas se não for open_text
         if (formData.type !== 'open_text') {
-          console.log('🔄 Executando operações nas alternativas...')
-          console.log('📊 Operações pendentes:', {
-            deletar: toDeleteIds.length,
-            atualizar: toUpdateIds.length,
-            inserir: toInsertAlternatives.length
-          })
-
           // 1. DELETAR alternativas marcadas
           if (toDeleteIds.length > 0) {
-            console.log('🗑️ Deletando alternativas:', toDeleteIds)
             const { error: deleteError } = await supabase
               .from('alternatives')
               .delete()
               .in('id', toDeleteIds)
 
             if (deleteError) {
-              console.error('❌ Erro ao deletar alternativas:', deleteError)
+              console.error('Erro ao deletar alternativas:', deleteError)
               alert('Erro ao deletar alternativas')
               return
             }
