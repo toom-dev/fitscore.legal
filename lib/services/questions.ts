@@ -1,14 +1,20 @@
 import { createClient } from '@/lib/supabase/client'
 import { QuestionWithAlternatives, StepData } from '@/lib/types/database'
 
-const supabase = createClient()
-
 /**
  * Busca todas as perguntas ativas com suas alternativas
  * Organiza por categoria para os steps do formulário
  */
 export async function getQuestionsForForm(): Promise<StepData[]> {
   try {
+    const supabase = createClient()
+    
+    // Verificar se as variáveis de ambiente estão configuradas
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
+      console.warn('Supabase não configurado. Retornando dados vazios para build.');
+      return [];
+    }
+
     const { data, error } = await supabase
       .from('questions_with_alternatives')
       .select('*')
@@ -17,7 +23,7 @@ export async function getQuestionsForForm(): Promise<StepData[]> {
       .order('order_index')
 
     if (error) {
-
+      console.error('Erro ao buscar perguntas:', error);
       return []
     }
 
@@ -65,6 +71,14 @@ export async function getQuestionsForForm(): Promise<StepData[]> {
  */
 export async function getQuestionById(id: string): Promise<QuestionWithAlternatives | null> {
   try {
+    const supabase = createClient()
+    
+    // Verificar se as variáveis de ambiente estão configuradas
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
+      console.warn('Supabase não configurado. Retornando null para build.');
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('questions_with_alternatives')
       .select('*')
@@ -72,14 +86,13 @@ export async function getQuestionById(id: string): Promise<QuestionWithAlternati
       .single()
 
     if (error || !data) {
-
+      console.error('Erro ao buscar pergunta:', error);
       return null
     }
 
     return data as QuestionWithAlternatives
-
-      } catch {
-
+  } catch (error) {
+    console.error('Erro inesperado ao buscar pergunta:', error);
     return null
   }
 }
@@ -89,6 +102,14 @@ export async function getQuestionById(id: string): Promise<QuestionWithAlternati
  */
 export async function getQuestionsByCategory(category: 'performance' | 'energia' | 'cultura'): Promise<QuestionWithAlternatives[]> {
   try {
+    const supabase = createClient()
+    
+    // Verificar se as variáveis de ambiente estão configuradas
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
+      console.warn('Supabase não configurado. Retornando array vazio para build.');
+      return [];
+    }
+
     const { data, error } = await supabase
       .from('questions_with_alternatives')
       .select('*')
@@ -97,14 +118,13 @@ export async function getQuestionsByCategory(category: 'performance' | 'energia'
       .order('order_index')
 
     if (error) {
-
+      console.error('Erro ao buscar perguntas por categoria:', error);
       return []
     }
 
     return (data || []) as QuestionWithAlternatives[]
-
-      } catch {
-
+  } catch (error) {
+    console.error('Erro inesperado ao buscar perguntas por categoria:', error);
     return []
   }
 }
