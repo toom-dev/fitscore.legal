@@ -108,7 +108,7 @@ export function AnswersSummary({ formData, steps }: AnswersSummaryProps) {
       </Card>
 
 
-      {steps.map((step, stepIndex) => {
+      {steps.map((step) => {
         const categoryAnswers = step.questions.map(question => {
           const answer = formData.answers.find(a => a.question_id === question.id)
           return { question, answer }

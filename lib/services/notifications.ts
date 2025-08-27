@@ -41,7 +41,7 @@ export class NotificationService {
 
       const data = await response.json()
       return { success: true, data }
-    } catch (error) {
+    } catch {
       return { success: false, error: 'Erro de conexão' }
     }
   }
@@ -63,7 +63,7 @@ export class NotificationService {
 
       const data = await response.json()
       return { success: true, data }
-    } catch (error) {
+    } catch {
       return { success: false, error: 'Erro de conexão' }
     }
   }
@@ -81,12 +81,12 @@ export class NotificationService {
 
       const data = await response.json()
       return { success: true, data }
-    } catch (error) {
+    } catch {
       return { success: false, error: 'Erro de conexão' }
     }
   }
 
-  static async deleteNotification(notificationId: string): Promise<ApiResponse<any>> {
+  static async deleteNotification(notificationId: string): Promise<ApiResponse<unknown>> {
     try {
       const response = await fetch(`${this.baseUrl}/${notificationId}`, {
         method: 'DELETE'
@@ -99,7 +99,7 @@ export class NotificationService {
 
       const data = await response.json()
       return { success: true, data }
-    } catch (error) {
+    } catch {
       return { success: false, error: 'Erro de conexão' }
     }
   }
@@ -109,7 +109,7 @@ export class NotificationService {
     message: string,
     type: NotificationType,
     category: NotificationCategory,
-    metadata?: any
+    metadata?: unknown
   ): Promise<ApiResponse<{ notification: Notification }>> {
     try {
       const response = await fetch(this.baseUrl, {
@@ -133,7 +133,7 @@ export class NotificationService {
 
       const data = await response.json()
       return { success: true, data }
-    } catch (error) {
+    } catch {
       return { success: false, error: 'Erro de conexão' }
     }
   }

@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { Button } from "@/src/components/ui/button"
 import { Badge } from "@/src/components/ui/badge"
 import { Input } from "@/src/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select"
+
 import { ApiService } from '@/lib/services/api'
 import { fitLabelColors } from '@/lib/types/database'
 import { CandidateDetailsModal } from '@/src/components/admin/candidate-details-modal'
@@ -15,20 +15,16 @@ import { Eye, Search, Filter, Download, Users, ChevronLeft, ChevronRight, X } fr
 type FitFilterType = 'all' | 'alto' | 'médio' | 'baixo' | 'pending'
 
 export default function CandidatosPage() {
-  const [candidatesData, setCandidatesData] = useState<any>(null)
+  const [candidatesData, setCandidatesData] = useState<unknown>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterFit, setFilterFit] = useState<FitFilterType[]>(['all'])
-  const [selectedCandidate, setSelectedCandidate] = useState<any | null>(null)
+  const [selectedCandidate, setSelectedCandidate] = useState<any>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
 
-  useEffect(() => {
-    loadCandidates()
-  }, [currentPage, searchTerm, filterFit])
-
-  const loadCandidates = async () => {
+  const loadCandidates = useCallback(async () => {
     try {
       setIsLoading(true)
       
@@ -45,11 +41,15 @@ export default function CandidatosPage() {
         setCandidatesData(response.data)
       }
 
-    } catch (error) {
+    } catch {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [currentPage, searchTerm, filterFit, itemsPerPage])
+
+  useEffect(() => {
+    loadCandidates()
+  }, [loadCandidates])
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
@@ -95,11 +95,11 @@ export default function CandidatosPage() {
   }
 
   const exportData = () => {
-    if (!candidatesData?.candidates) return
+    if (!(candidatesData as any)?.candidates) return
     
     const csvContent = "data:text/csv;charset=utf-8," + 
       "Nome,Email,Telefone,Score,Classificação,Criado,Completo\n" +
-      candidatesData.candidates.map((c: any) => 
+      (candidatesData as { candidates?: Array<{ name: string; email: string; phone?: string; fit_score?: number; fit_label?: string; created_at: string; completed_at?: string }> })?.candidates?.map((c) => 
         `"${c.name}","${c.email}","${c.phone || ''}","${c.fit_score || ''}","${c.fit_label || ''}","${formatDate(c.created_at)}","${c.completed_at ? formatDate(c.completed_at) : ''}"`
       ).join('\n')
 
@@ -176,7 +176,7 @@ export default function CandidatosPage() {
               <label className="text-sm font-medium mb-2 block">Filtrar por Classificação:</label>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { value: 'all', label: 'Todos', color: 'bg-primary', count: candidatesData?.pagination?.total || 0 },
+                  { value: 'all', label: 'Todos', color: 'bg-primary', count: (candidatesData as any)?.pagination?.total || 0 },
                   { value: 'alto', label: 'Fit Alto', color: 'bg-emerald-500', count: 0 },
                   { value: 'médio', label: 'Fit Médio', color: 'bg-blue-500', count: 0 },
                   { value: 'baixo', label: 'Fit Baixo', color: 'bg-yellow-500', count: 0 },
@@ -229,14 +229,14 @@ export default function CandidatosPage() {
             <div>
               <CardTitle className="flex items-center">
                 <Users className="w-5 h-5 mr-2" />
-                Candidatos ({candidatesData?.pagination?.total || 0})
+                Candidatos ({(candidatesData as any)?.pagination?.total || 0})
               </CardTitle>
               <CardDescription>
                 {searchTerm ? `Resultados para "${searchTerm}"` : 'Lista completa de candidatos'}
-                {candidatesData?.pagination && (
+                {(candidatesData as any)?.pagination && (
                   <span className="ml-2">
-                    • Página {currentPage} de {candidatesData.pagination.totalPages} 
-                    • Total: {candidatesData.pagination.total} candidatos
+                    • Página {currentPage} de {(candidatesData as any).pagination.totalPages} 
+                    • Total: {(candidatesData as any).pagination.total} candidatos
                   </span>
                 )}
               </CardDescription>
@@ -244,7 +244,7 @@ export default function CandidatosPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {!candidatesData?.candidates || candidatesData.candidates.length === 0 ? (
+          {!(candidatesData as any)?.candidates || (candidatesData as any).candidates.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p className="text-lg font-medium">Nenhum candidato encontrado</p>
@@ -253,11 +253,11 @@ export default function CandidatosPage() {
           ) : (
             <>
               <div className="space-y-4">
-                {candidatesData.candidates.map((candidate: any) => {
+                {(candidatesData as { candidates?: Array<{ id: string; name: string; email: string; phone?: string; fit_score?: number; fit_label?: string; created_at: string; completed_at?: string; total_answers: number }> })?.candidates?.map((candidate) => {
                 const fitStyle = getFitLabelStyle(candidate.fit_label || null)
                 
                 return (
-                  <div key={candidate.id} className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/30 transition-colors">
+                  <div key={candidate.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/30 transition-colors gap-4">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3">
                         <div>
@@ -277,9 +277,9 @@ export default function CandidatosPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
                       {candidate.fit_score !== null ? (
-                        <div className="text-right">
+                        <div className="text-left sm:text-right">
                           <div className="text-3xl font-bold text-primary mb-1">
                             {candidate.fit_score}
                           </div>
@@ -291,7 +291,7 @@ export default function CandidatosPage() {
                           </Badge>
                         </div>
                       ) : (
-                        <div className="text-center text-muted-foreground">
+                        <div className="text-left sm:text-center text-muted-foreground">
                           <div className="text-sm">Em andamento</div>
                           <Badge variant="outline">Pendente</Badge>
                         </div>
@@ -312,10 +312,10 @@ export default function CandidatosPage() {
               </div>
 
 
-              {candidatesData?.pagination && candidatesData.pagination.totalPages > 1 && (
-                <div className="flex items-center justify-between pt-4 border-t">
+              {(candidatesData as any)?.pagination && (candidatesData as any).pagination.totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-4 border-t gap-4">
                   <div className="text-sm text-muted-foreground">
-                    Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, candidatesData.pagination.total)} de {candidatesData.pagination.total} candidatos
+                    Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, (candidatesData as any).pagination.total)} de {(candidatesData as any).pagination.total} candidatos
                   </div>
                   
                   <div className="flex items-center space-x-2">
@@ -329,11 +329,11 @@ export default function CandidatosPage() {
                       Anterior
                     </Button>
                     
-                    <div className="flex items-center space-x-1">
-                      {Array.from({ length: candidatesData.pagination.totalPages }, (_, i) => i + 1)
+                    <div className="flex flex-wrap items-center justify-center gap-1">
+                      {Array.from({ length: (candidatesData as any).pagination.totalPages }, (_, i) => i + 1)
                         .filter(page => {
                           return page === 1 || 
-                                 page === candidatesData.pagination.totalPages || 
+                                 page === (candidatesData as any).pagination.totalPages || 
                                  (page >= currentPage - 1 && page <= currentPage + 1)
                         })
                         .map((page, index, array) => {
@@ -361,7 +361,7 @@ export default function CandidatosPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === candidatesData.pagination.totalPages}
+                      disabled={currentPage === (candidatesData as any).pagination.totalPages}
                     >
                       Próxima
                       <ChevronRight className="h-4 w-4" />

@@ -1,12 +1,11 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from "@/src/components/ui/button"
 import { Badge } from "@/src/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover"
 import { ScrollArea } from "@/src/components/ui/scroll-area"
-import { Separator } from "@/src/components/ui/separator"
 import { Notification, NotificationType, NotificationCategory } from '@/lib/types/notifications'
 import { 
   Bell, 

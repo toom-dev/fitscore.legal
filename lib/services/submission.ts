@@ -6,7 +6,7 @@ import {
   sanitizeCandidate,
   validateMultipleChoiceLimit 
 } from '@/lib/schemas/form-validation'
-import { NotificationService } from '@/lib/services/notifications'
+
 import { toast } from 'sonner'
 
 const supabase = createClient()
@@ -16,7 +16,7 @@ async function updateCandidateCompletion(
   totalScore: number, 
   fitLabel: string
 ): Promise<boolean> {
-  const { data: candidate, error } = await supabase
+  const { error } = await supabase
     .from('candidates')
     .update({
       fit_score: totalScore,
@@ -193,7 +193,7 @@ export async function submitForm(formData: FormData): Promise<SubmissionResponse
       message: 'Formulário enviado com sucesso!'
     }
 
-  } catch (error) {
+  } catch {
 
     toast.error('Erro inesperado. Tente novamente mais tarde.')
     return {

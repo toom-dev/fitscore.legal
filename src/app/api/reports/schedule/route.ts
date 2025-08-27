@@ -19,7 +19,7 @@ interface ScheduledReport {
   updated_at: string
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient()
     
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       reports: scheduledReports || []
     })
 
-  } catch (error) {
+      } catch {
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       report: data
     })
 
-  } catch (error) {
+      } catch {
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }
@@ -126,7 +126,7 @@ export async function PUT(request: NextRequest) {
       report: data
     })
 
-  } catch (error) {
+      } catch {
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }
@@ -161,7 +161,7 @@ export async function DELETE(request: NextRequest) {
       message: 'Relatório removido com sucesso'
     })
 
-  } catch (error) {
+      } catch {
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }

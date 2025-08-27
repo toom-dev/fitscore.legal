@@ -1,21 +1,20 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { Button } from "@/src/components/ui/button"
 import { Badge } from "@/src/components/ui/badge"
 import { Input } from "@/src/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select"
 import { NotificationCard } from '@/src/components/admin/notifications'
 import { useNotifications } from '@/lib/hooks/useNotifications'
-import { Notification, NotificationType, NotificationCategory } from '@/lib/types/notifications'
+import { Notification, NotificationType } from '@/lib/types/notifications'
 import { 
   Bell, 
   BellRing, 
   CheckCheck, 
   Filter, 
   Search, 
-  Trash2,
   RefreshCw,
   Archive
 } from 'lucide-react'
@@ -164,7 +163,7 @@ export default function NotificacoesPage() {
       </div>
 
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
@@ -270,7 +269,7 @@ export default function NotificacoesPage() {
               <span className="text-sm text-muted-foreground">Filtros ativos:</span>
               {searchTerm && (
                 <Badge variant="secondary">
-                  Busca: "{searchTerm}"
+                  Busca: &quot;{searchTerm}&quot;
                   <Button
                     variant="ghost"
                     size="sm"

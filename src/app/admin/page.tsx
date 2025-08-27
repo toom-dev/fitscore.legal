@@ -24,7 +24,7 @@ export default function DashboardPage() {
         setDashboardData(response.data)
       }
 
-    } catch (error) {
+    } catch {
     } finally {
       setIsLoading(false)
     }
@@ -73,7 +73,7 @@ export default function DashboardPage() {
       </div>
 
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <Card className="relative overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Candidatos</CardTitle>
@@ -158,7 +158,7 @@ export default function DashboardPage() {
               <p className="text-sm">Candidatos aparecerão aqui após completarem o formulário</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
               {[
                 { key: 'alto', label: 'Fit Alto', color: 'bg-emerald-500', icon: Award },
                 { key: 'médio', label: 'Fit Médio', color: 'bg-blue-500', icon: TrendingUp },
@@ -215,7 +215,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {dashboardData.recentCandidates.map((candidate: any, index: number) => (
+              {dashboardData.recentCandidates.map((candidate: any) => (
                 <div key={candidate.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                   <div className="flex items-center space-x-4">
                     <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold text-sm">

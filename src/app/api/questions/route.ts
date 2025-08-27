@@ -49,7 +49,7 @@ export async function GET() {
 
     return NextResponse.json({ questions: viewData || [] })
 
-  } catch (error) {
+      } catch {
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }
@@ -73,7 +73,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ success: true })
 
-  } catch (error) {
+      } catch {
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }
@@ -102,7 +102,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true })
 
-  } catch (error) {
+      } catch {
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }

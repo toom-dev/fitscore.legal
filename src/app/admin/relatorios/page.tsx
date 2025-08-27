@@ -12,14 +12,9 @@ import {
   FileText, 
   Clock, 
   Play, 
-  Pause, 
   Plus, 
-  Edit, 
   Trash2, 
   Calendar,
-  TrendingUp,
-  Users,
-  Award,
   Download,
   Eye
 } from 'lucide-react'
@@ -93,7 +88,7 @@ export default function RelatoriosPage() {
         const data = await response.json()
         setGeneratedReports(data.reports || [])
       }
-    } catch (error) {
+    } catch {
     }
   }
 
@@ -106,7 +101,7 @@ export default function RelatoriosPage() {
         const data = await response.json()
         setReports(data.reports || [])
       }
-    } catch (error) {
+    } catch {
 
     } finally {
       setIsLoading(false)
@@ -139,7 +134,7 @@ export default function RelatoriosPage() {
           }
         })
       }
-    } catch (error) {
+    } catch {
 
     }
   }
@@ -160,7 +155,7 @@ export default function RelatoriosPage() {
       if (response.ok) {
         await loadReports()
       }
-    } catch (error) {
+    } catch {
 
     }
   }
@@ -178,7 +173,7 @@ export default function RelatoriosPage() {
       if (response.ok) {
         await loadReports()
       }
-    } catch (error) {
+    } catch {
 
     }
   }
@@ -196,7 +191,7 @@ export default function RelatoriosPage() {
       } else {
         toast.error('Erro ao executar relatório')
       }
-    } catch (error) {
+    } catch {
 
     }
   }
@@ -223,7 +218,7 @@ export default function RelatoriosPage() {
       } else {
         toast.error('Erro ao gerar relatório')
       }
-    } catch (error) {
+    } catch {
 
     }
   }
@@ -274,9 +269,9 @@ export default function RelatoriosPage() {
   return (
     <div className="space-y-8">
 
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent dark:from-white dark:to-gray-200">
+          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent dark:from-white dark:to-gray-200">
             Relatórios Automáticos
           </h1>
           <p className="text-muted-foreground mt-2">
@@ -284,7 +279,7 @@ export default function RelatoriosPage() {
           </p>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button 
             variant="outline" 
             size="sm" 
@@ -320,7 +315,7 @@ export default function RelatoriosPage() {
       </div>
 
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
@@ -406,7 +401,7 @@ export default function RelatoriosPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="name">Nome do Relatório</Label>
                 <Input
@@ -477,7 +472,7 @@ export default function RelatoriosPage() {
               <Label htmlFor="enabled">Ativar relatório</Label>
             </div>
 
-            <div className="flex justify-end space-x-2">
+            <div className="flex flex-col sm:flex-row justify-end gap-2">
               <Button variant="outline" onClick={() => setIsCreating(false)}>
                 Cancelar
               </Button>
@@ -511,9 +506,9 @@ export default function RelatoriosPage() {
           reports.map((report) => (
             <Card key={report.id}>
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <CardTitle className="flex items-center space-x-2">
+                    <CardTitle className="flex flex-wrap items-center gap-2">
                       <span>{report.name}</span>
                       <Badge variant={report.config.enabled ? 'default' : 'secondary'}>
                         {report.config.enabled ? 'Ativo' : 'Inativo'}
@@ -524,7 +519,7 @@ export default function RelatoriosPage() {
                     </CardDescription>
                   </div>
                   
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Switch
                       checked={report.config.enabled || false}
                       onCheckedChange={(checked) => toggleReport(report.id, checked)}
@@ -550,7 +545,7 @@ export default function RelatoriosPage() {
               </CardHeader>
               
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">Última execução:</span>
                     <div className="font-medium">
@@ -608,9 +603,9 @@ export default function RelatoriosPage() {
               generatedReports.map((report) => (
                 <Card key={report.id}>
                   <CardHeader>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div>
-                        <CardTitle className="flex items-center space-x-2">
+                        <CardTitle className="flex flex-wrap items-center gap-2">
                           <span>{report.title}</span>
                           <Badge variant={report.generated_by === 'manual' ? 'default' : 'secondary'}>
                             {report.generated_by === 'manual' ? 'Manual' : 
@@ -622,7 +617,7 @@ export default function RelatoriosPage() {
                         </CardDescription>
                       </div>
                       
-                      <div className="flex items-center space-x-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -649,7 +644,7 @@ export default function RelatoriosPage() {
                                 } else {
                                   toast.error('Erro ao excluir relatório')
                                 }
-                              } catch (error) {
+                              } catch {
                                 toast.error('Erro inesperado')
                               }
                             }
@@ -663,7 +658,7 @@ export default function RelatoriosPage() {
                   </CardHeader>
                   
                   <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                       <div>
                         <span className="text-muted-foreground">Período:</span>
                         <div className="font-medium">

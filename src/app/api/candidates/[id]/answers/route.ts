@@ -80,7 +80,7 @@ export async function GET(
 
     return NextResponse.json({ answers: formattedAnswers })
 
-  } catch (error) {
+      } catch {
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }

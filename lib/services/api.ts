@@ -12,7 +12,7 @@ interface ApiResponse<T> {
 }
 
 interface CandidatesResponse {
-  candidates: any[]
+  candidates: unknown[]
   pagination: {
     page: number
     limit: number
@@ -33,7 +33,7 @@ interface DashboardStats {
     baixo: number
     pending: number
   }
-  recentCandidates: any[]
+  recentCandidates: unknown[]
 }
 
 export class ApiService {
@@ -57,12 +57,12 @@ export class ApiService {
 
       const data = await response.json()
       return { success: true, data }
-    } catch (error) {
+    } catch {
       return { success: false, error: 'Erro de conexão' }
     }
   }
 
-  static async getCandidateAnswers(candidateId: string): Promise<ApiResponse<{ answers: any[] }>> {
+  static async getCandidateAnswers(candidateId: string): Promise<ApiResponse<{ answers: unknown[] }>> {
     try {
       const response = await fetch(`${this.baseUrl}/candidates/${candidateId}/answers`)
       
@@ -73,12 +73,12 @@ export class ApiService {
 
       const data = await response.json()
       return { success: true, data }
-    } catch (error) {
+    } catch {
       return { success: false, error: 'Erro de conexão' }
     }
   }
 
-  static async getQuestions(): Promise<ApiResponse<{ questions: any[] }>> {
+  static async getQuestions(): Promise<ApiResponse<{ questions: unknown[] }>> {
     try {
       const response = await fetch(`${this.baseUrl}/questions`)
       
@@ -89,12 +89,12 @@ export class ApiService {
 
       const data = await response.json()
       return { success: true, data }
-    } catch (error) {
+    } catch {
       return { success: false, error: 'Erro de conexão' }
     }
   }
 
-  static async toggleQuestionStatus(questionId: string, isActive: boolean): Promise<ApiResponse<any>> {
+  static async toggleQuestionStatus(questionId: string, isActive: boolean): Promise<ApiResponse<unknown>> {
     try {
       const response = await fetch(`${this.baseUrl}/questions`, {
         method: 'PUT',
@@ -114,12 +114,12 @@ export class ApiService {
 
       const data = await response.json()
       return { success: true, data }
-    } catch (error) {
+    } catch {
       return { success: false, error: 'Erro de conexão' }
     }
   }
 
-  static async deleteQuestion(questionId: string): Promise<ApiResponse<any>> {
+  static async deleteQuestion(questionId: string): Promise<ApiResponse<unknown>> {
     try {
       const response = await fetch(`${this.baseUrl}/questions?id=${questionId}`, {
         method: 'DELETE'
@@ -132,7 +132,7 @@ export class ApiService {
 
       const data = await response.json()
       return { success: true, data }
-    } catch (error) {
+    } catch {
       return { success: false, error: 'Erro de conexão' }
     }
   }
@@ -148,12 +148,12 @@ export class ApiService {
 
       const data = await response.json()
       return { success: true, data }
-    } catch (error) {
+    } catch {
       return { success: false, error: 'Erro de conexão' }
     }
   }
 
-  static async submitForm(candidateId: string, answers: any[]): Promise<ApiResponse<any>> {
+  static async submitForm(candidateId: string, answers: unknown[]): Promise<ApiResponse<unknown>> {
     try {
       const response = await fetch(`${this.baseUrl}/submission`, {
         method: 'POST',
@@ -173,7 +173,7 @@ export class ApiService {
 
       const data = await response.json()
       return { success: true, data }
-    } catch (error) {
+    } catch {
       return { success: false, error: 'Erro de conexão' }
     }
   }

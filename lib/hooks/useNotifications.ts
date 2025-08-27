@@ -35,7 +35,7 @@ export function useNotifications(autoRefresh: boolean = true): UseNotificationsR
       } else {
         setError(response.error || 'Erro ao carregar notificações')
       }
-    } catch (err) {
+    } catch {
       setError('Erro inesperado ao carregar notificações')
     } finally {
       setIsLoading(false)
@@ -56,7 +56,7 @@ export function useNotifications(autoRefresh: boolean = true): UseNotificationsR
         )
         setUnreadCount(prev => Math.max(0, prev - 1))
       }
-    } catch (err) {
+    } catch {
       // Handle error silently or show toast
     }
   }, [])
@@ -71,7 +71,7 @@ export function useNotifications(autoRefresh: boolean = true): UseNotificationsR
         )
         setUnreadCount(0)
       }
-    } catch (err) {
+    } catch {
       // Handle error silently or show toast
     }
   }, [])
@@ -89,7 +89,7 @@ export function useNotifications(autoRefresh: boolean = true): UseNotificationsR
           setUnreadCount(prev => Math.max(0, prev - 1))
         }
       }
-    } catch (err) {
+    } catch {
       // Handle error silently or show toast
     }
   }, [notifications])

@@ -15,6 +15,7 @@ import { submitForm } from "@/lib/services/submission"
 import { SubmissionResponse } from "@/lib/types/database"
 import { formatPhoneMask, removePhoneMask } from "@/lib/schemas/form-validation"
 import { z } from "zod"
+import { toast } from "sonner"
 
 export default function MultiStepForm() {
   const {
@@ -217,11 +218,11 @@ export default function MultiStepForm() {
     ]
 
     return (
-      <div className="flex justify-center items-center space-x-4 mb-8">
+      <div className="flex justify-center items-center space-x-2 sm:space-x-4 mb-8 overflow-x-auto pb-2">
         {allSteps.map((step, index) => (
           <div key={step.category} className="flex items-center">
             <div className={`
-              flex items-center justify-center w-12 h-12 rounded-full border-2 
+              flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 
               transition-all duration-500 ease-out transform hover:scale-105 
               ${currentStep === index
                 ? 'bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/25' 
@@ -233,14 +234,14 @@ export default function MultiStepForm() {
               }
             `}>
               {isStepCompleted(index) && currentStep !== index ? (
-                <Check className="w-5 h-5 animate-in zoom-in duration-300" />
+                <Check className="w-4 h-4 sm:w-5 sm:h-5 animate-in zoom-in duration-300" />
               ) : (
-                <span className="text-sm font-semibold">{index + 1}</span>
+                <span className="text-xs sm:text-sm font-semibold">{index + 1}</span>
               )}
             </div>
             {index < allSteps.length - 1 && (
-              <div className="relative mx-3">
-                <div className="w-16 h-0.5 bg-muted rounded-full" />
+              <div className="relative mx-2 sm:mx-3">
+                <div className="w-8 sm:w-16 h-0.5 bg-muted rounded-full" />
                 <div className={`
                   absolute top-0 left-0 h-0.5 bg-gradient-to-r from-primary to-green-500 rounded-full 
                   transition-all duration-700 ease-out
@@ -419,7 +420,7 @@ export default function MultiStepForm() {
         <CardContent className="space-y-6">
           {renderCurrentStep()}
           
-          <div className="flex justify-between pt-6 border-t border-border/50">
+          <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 pt-6 border-t border-border/50">
             <Button
               variant="outline"
               onClick={prevStep}
@@ -465,10 +466,10 @@ export default function MultiStepForm() {
         </CardContent>
       </Card>
       
-      <div className="mt-6 text-center text-sm text-muted-foreground animate-in fade-in duration-1000 delay-500">
-        <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-background/50 backdrop-blur-sm border border-border/30">
-          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-          <span>Seus dados são confidenciais e utilizados apenas para gerar seu Fit Score personalizado</span>
+      <div className="mt-6 text-center text-xs sm:text-sm text-muted-foreground animate-in fade-in duration-1000 delay-500">
+        <div className="inline-flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-full bg-background/50 backdrop-blur-sm border border-border/30 max-w-full">
+          <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+          <span className="text-center">Seus dados são confidenciais e utilizados apenas para gerar seu Fit Score personalizado</span>
         </div>
       </div>
     </div>

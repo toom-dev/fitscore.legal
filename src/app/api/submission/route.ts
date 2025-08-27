@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       fitLabel
     })
 
-  } catch (error) {
+      } catch {
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }

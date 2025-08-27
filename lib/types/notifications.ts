@@ -23,7 +23,7 @@ export interface Notification {
     score?: number
     questionId?: string
     exportUrl?: string
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 

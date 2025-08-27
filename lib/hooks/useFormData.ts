@@ -70,7 +70,7 @@ export function useFormData(): UseFormDataReturn {
           ...prev,
           answers: initialAnswers
         }))
-      } catch (error) {
+      } catch {
 
       } finally {
         setIsLoading(false)
@@ -286,7 +286,7 @@ export function useFormData(): UseFormDataReturn {
         }
       })
     }))
-  }, [formData.answers.map(a => `${a.question_id}-${JSON.stringify(a.alternative_id)}-${a.text_answer}`).join(''), steps])
+  }, [formData.answers, steps])
 
   return {
     // Estados

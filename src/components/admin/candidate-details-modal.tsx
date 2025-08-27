@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { 
   Dialog,
   DialogContent,
@@ -98,13 +98,7 @@ export function CandidateDetailsModal({ candidate, isOpen, onClose }: CandidateD
     }
   }, [isOpen])
 
-  useEffect(() => {
-    if (isOpen && candidate) {
-      loadCandidateAnswers()
-    }
-  }, [isOpen, candidate])
-
-  const loadCandidateAnswers = async () => {
+  const loadCandidateAnswers = useCallback(async () => {
     if (!candidate) return
 
     try {
@@ -128,7 +122,7 @@ export function CandidateDetailsModal({ candidate, isOpen, onClose }: CandidateD
 
 
       const questionIds = [...new Set(answersData.map(a => a.question_id))]
-      const { data: questionsData, error: questionsError } = await supabase
+      const { data: questionsData } = await supabase
         .from('questions')
         .select('*')
         .in('id', questionIds)
@@ -140,7 +134,7 @@ export function CandidateDetailsModal({ candidate, isOpen, onClose }: CandidateD
       
       let alternativesData = []
       if (alternativeIds.length > 0) {
-        const { data: altData, error: altError } = await supabase
+        const { data: altData } = await supabase
           .from('alternatives')
           .select('*')
           .in('id', alternativeIds)
@@ -197,11 +191,17 @@ export function CandidateDetailsModal({ candidate, isOpen, onClose }: CandidateD
       const formattedAnswers = Array.from(answersMap.values())
       setAnswers(formattedAnswers)
       
-    } catch (error) {
+    } catch {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [candidate])
+
+  useEffect(() => {
+    if (isOpen && candidate) {
+      loadCandidateAnswers()
+    }
+  }, [isOpen, candidate, loadCandidateAnswers])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('pt-BR', {

@@ -54,7 +54,7 @@ export async function getQuestionsForForm(): Promise<StepData[]> {
 
     return steps.filter(step => step.questions.length > 0)
 
-  } catch (error) {
+      } catch {
 
     return []
   }
@@ -78,7 +78,7 @@ export async function getQuestionById(id: string): Promise<QuestionWithAlternati
 
     return data as QuestionWithAlternatives
 
-  } catch (error) {
+      } catch {
 
     return null
   }
@@ -103,7 +103,7 @@ export async function getQuestionsByCategory(category: 'performance' | 'energia'
 
     return (data || []) as QuestionWithAlternatives[]
 
-  } catch (error) {
+      } catch {
 
     return []
   }

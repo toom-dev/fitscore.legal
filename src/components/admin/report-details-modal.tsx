@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/src/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/src/components/ui/dialog"
 import { Button } from "@/src/components/ui/button"
 import { Badge } from "@/src/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { ScrollArea } from "@/src/components/ui/scroll-area"
 import { Separator } from "@/src/components/ui/separator"
 import { 
@@ -15,7 +15,6 @@ import {
   TrendingUp, 
   BarChart3,
   Download,
-  X,
   Clock,
   Target
 } from 'lucide-react'
