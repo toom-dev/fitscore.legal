@@ -2,8 +2,10 @@
 
 import { QuestionWithAlternatives, FormAnswer } from '@/lib/types/database'
 import { Label } from '@/src/components/ui/label'
-import { Input } from '@/src/components/ui/input'
+import { FormTextarea } from '@/src/components/ui/form-textarea'
 import { Checkbox } from '@/src/components/ui/checkbox'
+import { useFormValidation } from '@/lib/hooks/useFormValidation'
+import { z } from 'zod'
 
 interface DynamicQuestionProps {
   question: QuestionWithAlternatives
@@ -13,6 +15,11 @@ interface DynamicQuestionProps {
 }
 
 export function DynamicQuestion({ question, answer, onAnswerChange, index }: DynamicQuestionProps) {
+
+  const { getFieldError, validateField } = useFormValidation()
+  
+
+  const textSchema = z.string().min(10, "Resposta deve ter pelo menos 10 caracteres")
   
   const handleSingleChoiceChange = (alternativeId: string) => {
     onAnswerChange(question.id, {
@@ -26,13 +33,13 @@ export function DynamicQuestion({ question, answer, onAnswerChange, index }: Dyn
     let newIds: string[]
 
     if (checked) {
-      // Verificar se há limite de seleções (baseado na descrição da pergunta)
+
       const hasLimit = question.description?.toLowerCase().includes('até 2') || 
                       question.title?.toLowerCase().includes('até 2')
       const maxSelections = hasLimit ? 2 : Infinity
       
       if (currentIds.length >= maxSelections) {
-        // Não adicionar se já atingiu o limite
+
         return
       }
       
@@ -59,7 +66,7 @@ export function DynamicQuestion({ question, answer, onAnswerChange, index }: Dyn
       case 'single_choice':
         return (
           <div className="space-y-3">
-            {question.alternatives.map((alternative, altIndex) => (
+                                    {question.alternatives.map((alternative) => (
               <div key={alternative.id} className="flex items-center space-x-3 group">
                 <input
                   type="radio"
@@ -125,12 +132,23 @@ export function DynamicQuestion({ question, answer, onAnswerChange, index }: Dyn
 
       case 'open_text':
         return (
-          <div className="space-y-2">
-            <Input
+          <div>
+            <FormTextarea
               id={question.id}
               placeholder="Digite sua resposta..."
               value={answer?.text_answer || ''}
-              onChange={(e) => handleTextChange(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value
+                handleTextChange(value)
+
+                validateField(`text-${question.id}`, value, textSchema)
+              }}
+              onBlur={(e) => {
+
+                validateField(`text-${question.id}`, e.target.value, textSchema)
+              }}
+              error={getFieldError(`text-${question.id}`)}
+              rows={4}
               className="w-full transition-all duration-300 focus:scale-[1.02] focus:shadow-lg focus:border-primary/50 hover:border-primary/30"
             />
           </div>

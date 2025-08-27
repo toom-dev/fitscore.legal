@@ -6,108 +6,77 @@ import { Button } from "@/src/components/ui/button"
 import { Badge } from "@/src/components/ui/badge"
 import { Input } from "@/src/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select"
-import { createClient } from '@/lib/supabase/client'
-import { CandidateSummaryView, fitLabelColors } from '@/lib/types/database'
+import { ApiService } from '@/lib/services/api'
+import { fitLabelColors } from '@/lib/types/database'
 import { CandidateDetailsModal } from '@/src/components/admin/candidate-details-modal'
-import { Loader2, Eye, Search, Filter, Download, Users } from 'lucide-react'
+import { CandidatesSkeleton } from '@/src/components/admin/skeletons'
+import { Eye, Search, Filter, Download, Users, ChevronLeft, ChevronRight, X } from 'lucide-react'
+
+type FitFilterType = 'all' | 'alto' | 'médio' | 'baixo' | 'pending'
 
 export default function CandidatosPage() {
-  const [candidates, setCandidates] = useState<CandidateSummaryView[]>([])
-  const [filteredCandidates, setFilteredCandidates] = useState<CandidateSummaryView[]>([])
+  const [candidatesData, setCandidatesData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [filterFit, setFilterFit] = useState<'all' | 'Fit Altíssimo' | 'Fit Aprovado' | 'Fit Questionável' | 'Fora do Perfil' | 'pending'>('all')
-  const [selectedCandidate, setSelectedCandidate] = useState<CandidateSummaryView | null>(null)
+  const [filterFit, setFilterFit] = useState<FitFilterType[]>(['all'])
+  const [selectedCandidate, setSelectedCandidate] = useState<any | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-
-  const supabase = createClient()
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(10)
 
   useEffect(() => {
     loadCandidates()
-  }, [])
-
-  useEffect(() => {
-    filterCandidates()
-  }, [candidates, searchTerm, filterFit])
+  }, [currentPage, searchTerm, filterFit])
 
   const loadCandidates = async () => {
     try {
       setIsLoading(true)
       
-      // Mesmo sistema de debug da página principal
-      console.log('🔍 [Candidatos] Tentando acessar candidates_summary...')
-      const { data: summaryData, error: summaryError } = await supabase
-        .from('candidates_summary')
-        .select('*')
-        .order('created_at', { ascending: false })
+      const filters = {
+        page: currentPage,
+        limit: itemsPerPage,
+        search: searchTerm || undefined,
+        fitFilter: filterFit.includes('all') ? undefined : filterFit
+      }
 
-      if (summaryError) {
-        console.warn('⚠️ [Candidatos] View falhou, usando query direta...')
-        
-        // Fallback: buscar candidatos e respostas separadamente
-        const { data: candidatesData, error: candidatesError } = await supabase
-          .from('candidates')
-          .select('*')
-          .order('created_at', { ascending: false })
-
-        if (candidatesError) {
-          console.error('❌ [Candidatos] Erro ao carregar candidatos:', candidatesError)
-          return
-        }
-
-        // Para cada candidato, buscar suas respostas
-        const candidatesWithAnswers = await Promise.all(
-          (candidatesData || []).map(async (candidate) => {
-            const { data: answers, error: answersError } = await supabase
-              .from('answers')
-              .select('id, question_id')
-              .eq('candidate_id', candidate.id)
-
-            if (answersError) {
-              console.warn(`⚠️ [Candidatos] Erro ao buscar respostas para ${candidate.name}:`, answersError)
-            }
-
-            return {
-              ...candidate,
-              total_answers: answers?.length || 0,
-              answered_questions: new Set(answers?.map(a => a.question_id) || []).size
-            }
-          })
-        )
-
-        setCandidates(candidatesWithAnswers)
-      } else {
-        console.log('✅ [Candidatos] Dados da view:', summaryData?.length, 'candidatos')
-        setCandidates(summaryData || [])
+      const response = await ApiService.getCandidates(filters)
+      
+      if (response.success && response.data) {
+        setCandidatesData(response.data)
       }
 
     } catch (error) {
-      console.error('❌ [Candidatos] Erro inesperado:', error)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const filterCandidates = () => {
-    let filtered = candidates
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
 
-    // Filtrar por fit_label
-    if (filterFit === 'pending') {
-      filtered = filtered.filter(c => c.fit_label === null || c.completed_at === null)
-    } else if (filterFit !== 'all') {
-      filtered = filtered.filter(c => c.fit_label === filterFit)
+  const handleFilterToggle = (filter: FitFilterType) => {
+    if (filter === 'all') {
+      setFilterFit(['all'])
+    } else {
+      setFilterFit(prev => {
+        const newFilters = prev.filter(f => f !== 'all')
+        
+        if (newFilters.includes(filter)) {
+          const updated = newFilters.filter(f => f !== filter)
+          return updated.length === 0 ? ['all'] : updated
+        } else {
+          return [...newFilters, filter]
+        }
+      })
     }
+  }
 
-    // Filtrar por termo de busca
-    if (searchTerm) {
-      filtered = filtered.filter(c => 
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.phone?.includes(searchTerm)
-      )
-    }
-
-    setFilteredCandidates(filtered)
+  const removeFilter = (filter: FitFilterType) => {
+    setFilterFit(prev => {
+      const updated = prev.filter(f => f !== filter)
+      return updated.length === 0 ? ['all'] : updated
+    })
   }
 
   const formatDate = (dateString: string) => {
@@ -126,9 +95,11 @@ export default function CandidatosPage() {
   }
 
   const exportData = () => {
+    if (!candidatesData?.candidates) return
+    
     const csvContent = "data:text/csv;charset=utf-8," + 
       "Nome,Email,Telefone,Score,Classificação,Criado,Completo\n" +
-      filteredCandidates.map(c => 
+      candidatesData.candidates.map((c: any) => 
         `"${c.name}","${c.email}","${c.phone || ''}","${c.fit_score || ''}","${c.fit_label || ''}","${formatDate(c.created_at)}","${c.completed_at ? formatDate(c.completed_at) : ''}"`
       ).join('\n')
 
@@ -141,7 +112,7 @@ export default function CandidatosPage() {
     document.body.removeChild(link)
   }
 
-  const handleViewDetails = (candidate: CandidateSummaryView) => {
+  const handleViewDetails = (candidate: any) => {
     setSelectedCandidate(candidate)
     setIsModalOpen(true)
   }
@@ -152,19 +123,12 @@ export default function CandidatosPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="flex items-center space-x-2">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          <span className="text-muted-foreground">Carregando candidatos...</span>
-        </div>
-      </div>
-    )
+    return <CandidatesSkeleton />
   }
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent dark:from-white dark:to-gray-200">
@@ -183,97 +147,113 @@ export default function CandidatosPage() {
         </div>
       </div>
 
-      {/* Filtros e Busca */}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
             <Filter className="w-5 h-5 mr-2" />
-            Filtros
+            Filtros e Busca
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por nome, email ou telefone..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome, email ou telefone..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
               </div>
             </div>
-            
-            <div className="w-full sm:w-64">
-              <Select value={filterFit} onValueChange={(value: 'all' | 'Fit Altíssimo' | 'Fit Aprovado' | 'Fit Questionável' | 'Fora do Perfil' | 'pending') => setFilterFit(value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filtrar por Fit" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">
-                    <span className="flex items-center gap-2">
-                      Todos ({candidates.length})
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="Fit Altíssimo">
-                    <span className="flex items-center gap-2">
-                      <span className="w-3 h-3 bg-green-600 rounded-full"></span>
-                      Fit Altíssimo ({candidates.filter(c => c.fit_label === 'Fit Altíssimo').length})
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="Fit Aprovado">
-                    <span className="flex items-center gap-2">
-                      <span className="w-3 h-3 bg-blue-600 rounded-full"></span>
-                      Fit Aprovado ({candidates.filter(c => c.fit_label === 'Fit Aprovado').length})
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="Fit Questionável">
-                    <span className="flex items-center gap-2">
-                      <span className="w-3 h-3 bg-yellow-600 rounded-full"></span>
-                      Fit Questionável ({candidates.filter(c => c.fit_label === 'Fit Questionável').length})
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="Fora do Perfil">
-                    <span className="flex items-center gap-2">
-                      <span className="w-3 h-3 bg-red-600 rounded-full"></span>
-                      Fora do Perfil ({candidates.filter(c => c.fit_label === 'Fora do Perfil').length})
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="pending">
-                    <span className="flex items-center gap-2">
-                      <span className="w-3 h-3 bg-gray-600 rounded-full"></span>
-                      Pendentes ({candidates.filter(c => !c.fit_label || !c.completed_at).length})
-                    </span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Filtrar por Classificação:</label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: 'all', label: 'Todos', color: 'bg-primary', count: candidatesData?.pagination?.total || 0 },
+                  { value: 'alto', label: 'Fit Alto', color: 'bg-emerald-500', count: 0 },
+                  { value: 'médio', label: 'Fit Médio', color: 'bg-blue-500', count: 0 },
+                  { value: 'baixo', label: 'Fit Baixo', color: 'bg-yellow-500', count: 0 },
+                  { value: 'pending', label: 'Pendentes', color: 'bg-gray-500', count: 0 }
+                ].map((option) => (
+                  <Button
+                    key={option.value}
+                    variant={filterFit.includes(option.value as FitFilterType) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleFilterToggle(option.value as FitFilterType)}
+                    className="flex items-center gap-2"
+                  >
+                    <div className={`w-3 h-3 ${option.color} rounded-full`}></div>
+                    {option.label} ({option.count})
+                  </Button>
+                ))}
+              </div>
             </div>
+
+
+            {!filterFit.includes('all') && filterFit.length > 0 && (
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-sm text-muted-foreground">Filtros ativos:</span>
+                {filterFit.map((filter) => (
+                  <Badge key={filter} variant="secondary" className="flex items-center gap-1">
+                    {filter === 'pending' ? 'Pendentes' : 
+                     filter === 'alto' ? 'Fit Alto' :
+                     filter === 'médio' ? 'Fit Médio' :
+                     filter === 'baixo' ? 'Fit Baixo' : filter}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-4 p-0 hover:bg-transparent"
+                      onClick={() => removeFilter(filter)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Lista de Candidatos */}
+
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Users className="w-5 h-5 mr-2" />
-            Candidatos ({filteredCandidates.length})
-          </CardTitle>
-          <CardDescription>
-            {searchTerm && `Resultados para "${searchTerm}"`}
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center">
+                <Users className="w-5 h-5 mr-2" />
+                Candidatos ({candidatesData?.pagination?.total || 0})
+              </CardTitle>
+              <CardDescription>
+                {searchTerm ? `Resultados para "${searchTerm}"` : 'Lista completa de candidatos'}
+                {candidatesData?.pagination && (
+                  <span className="ml-2">
+                    • Página {currentPage} de {candidatesData.pagination.totalPages} 
+                    • Total: {candidatesData.pagination.total} candidatos
+                  </span>
+                )}
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {filteredCandidates.length === 0 ? (
+          {!candidatesData?.candidates || candidatesData.candidates.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p className="text-lg font-medium">Nenhum candidato encontrado</p>
               <p className="text-sm">Tente ajustar os filtros de busca</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredCandidates.map((candidate) => {
+            <>
+              <div className="space-y-4">
+                {candidatesData.candidates.map((candidate: any) => {
                 const fitStyle = getFitLabelStyle(candidate.fit_label || null)
                 
                 return (
@@ -284,16 +264,16 @@ export default function CandidatosPage() {
                           <h3 className="font-semibold text-lg">{candidate.name}</h3>
                           <p className="text-sm text-muted-foreground">{candidate.email}</p>
                           {candidate.phone && (
-                            <p className="text-xs text-muted-foreground">📱 {candidate.phone}</p>
+                            <p className="text-xs text-muted-foreground">{candidate.phone}</p>
                           )}
                         </div>
                       </div>
                       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                        <span>📅 {formatDate(candidate.created_at)}</span>
+                        <span>Criado: {formatDate(candidate.created_at)}</span>
                         {candidate.completed_at && (
-                          <span>✅ {formatDate(candidate.completed_at)}</span>
+                          <span>Completo: {formatDate(candidate.completed_at)}</span>
                         )}
-                        <span>💬 {candidate.total_answers} respostas</span>
+                        <span>{candidate.total_answers} respostas</span>
                       </div>
                     </div>
 
@@ -329,12 +309,72 @@ export default function CandidatosPage() {
                   </div>
                 )
               })}
-            </div>
+              </div>
+
+
+              {candidatesData?.pagination && candidatesData.pagination.totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <div className="text-sm text-muted-foreground">
+                    Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, candidatesData.pagination.total)} de {candidatesData.pagination.total} candidatos
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Anterior
+                    </Button>
+                    
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: candidatesData.pagination.totalPages }, (_, i) => i + 1)
+                        .filter(page => {
+                          return page === 1 || 
+                                 page === candidatesData.pagination.totalPages || 
+                                 (page >= currentPage - 1 && page <= currentPage + 1)
+                        })
+                        .map((page, index, array) => {
+                          const showEllipsis = index > 0 && page - array[index - 1] > 1
+                          
+                          return (
+                            <div key={page} className="flex items-center">
+                              {showEllipsis && (
+                                <span className="px-2 text-muted-foreground">...</span>
+                              )}
+                              <Button
+                                variant={currentPage === page ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handlePageChange(page)}
+                                className="w-8 h-8 p-0"
+                              >
+                                {page}
+                              </Button>
+                            </div>
+                          )
+                        })}
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === candidatesData.pagination.totalPages}
+                    >
+                      Próxima
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* Modal de Detalhes */}
+
       <CandidateDetailsModal 
         candidate={selectedCandidate}
         isOpen={isModalOpen}

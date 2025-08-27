@@ -13,7 +13,7 @@ import { Input } from "@/src/components/ui/input"
 import { Label } from "@/src/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select"
 import { Textarea } from "@/src/components/ui/textarea"
-import { Badge } from "@/src/components/ui/badge"
+// import { Badge } from "@/src/components/ui/badge"
 import { createClient } from '@/lib/supabase/client'
 import { QuestionWithAlternatives } from '@/lib/types/database'
 import { Plus, X, Save, Loader2 } from 'lucide-react'
@@ -46,18 +46,18 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
   })
   const [alternatives, setAlternatives] = useState<Alternative[]>([])
   
-  // Arrays para rastrear operações
+
   const [toDeleteIds, setToDeleteIds] = useState<string[]>([])
   const [toUpdateIds, setToUpdateIds] = useState<string[]>([])
   const [toInsertAlternatives, setToInsertAlternatives] = useState<Alternative[]>([])
   
   const supabase = createClient()
 
-  // Resetar form quando modal abrir/fechar
+
   useEffect(() => {
     if (isOpen) {
       if (question) {
-        // Editando pergunta existente
+
         setFormData({
           title: question.title,
           description: question.description || '',
@@ -74,12 +74,10 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
         })) || []
         setAlternatives(questionAlts)
         
-        // Resetar arrays de operações
         setToDeleteIds([])
         setToUpdateIds([])
         setToInsertAlternatives([])
       } else {
-        // Nova pergunta
         setFormData({
           title: '',
           description: '',
@@ -93,7 +91,6 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
           { text: '', value: 0, order_index: 2 }
         ])
         
-        // Resetar arrays de operações
         setToDeleteIds([])
         setToUpdateIds([])
         setToInsertAlternatives([])
@@ -115,34 +112,28 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
   const removeAlternative = (index: number) => {
     const alternativeToRemove = alternatives[index]
     
-    // Se tem ID, é uma alternativa existente - adicionar ao array de delete
     if (alternativeToRemove.id) {
       setToDeleteIds(prev => [...prev, alternativeToRemove.id!])
     } else {
-      // Se não tem ID, é uma alternativa nova - remover do array de insert
       setToInsertAlternatives(prev => prev.filter(alt => alt !== alternativeToRemove))
     }
     
-    // Remover da lista visual
     setAlternatives(prev => prev.filter((_, i) => i !== index))
   }
 
   const updateAlternative = (index: number, field: 'text' | 'value', value: string | number) => {
     const alternativeToUpdate = alternatives[index]
     
-    // Se tem ID e não está no array de insert, é uma alternativa existente - adicionar ao array de update
     if (alternativeToUpdate.id && !toInsertAlternatives.some(alt => alt === alternativeToUpdate)) {
       if (!toUpdateIds.includes(alternativeToUpdate.id)) {
         setToUpdateIds(prev => [...prev, alternativeToUpdate.id!])
       }
     } else if (!alternativeToUpdate.id) {
-      // Se não tem ID, atualizar no array de insert
       setToInsertAlternatives(prev => prev.map(alt => 
         alt === alternativeToUpdate ? { ...alt, [field]: value } : alt
       ))
     }
     
-    // Atualizar na lista visual
     setAlternatives(prev => prev.map((alt, i) => 
       i === index ? { ...alt, [field]: value } : alt
     ))
@@ -161,12 +152,9 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
       return
     }
 
-    // Prevenir múltiplas submissões
     if (isLoading) {
       return
     }
-
-    // Debounce para evitar cliques duplos
     const now = Date.now()
     if (now - lastSaveTime < 2000) {
       return
@@ -177,8 +165,6 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
       setIsLoading(true)
 
       if (question) {
-        
-        // Atualizar pergunta existente
         const { error: questionError } = await supabase
           .from('questions')
           .update({
@@ -196,9 +182,7 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
           return
         }
 
-        // Atualizar alternativas se não for open_text
         if (formData.type !== 'open_text') {
-          // 1. DELETAR alternativas marcadas
           if (toDeleteIds.length > 0) {
             const { error: deleteError } = await supabase
               .from('alternatives')
@@ -210,8 +194,6 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
               return
             }
           }
-
-          // 2. ATUALIZAR alternativas modificadas
           for (const altId of toUpdateIds) {
             const currentAlt = alternatives.find(alt => alt.id === altId)
             if (currentAlt && currentAlt.text.trim()) {
@@ -232,8 +214,6 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
               }
             }
           }
-
-          // 3. INSERIR novas alternativas
           const validInsertAlternatives = toInsertAlternatives.filter(alt => alt.text.trim())
           if (validInsertAlternatives.length > 0) {
             const alternativesToInsert = validInsertAlternatives.map((alt, index) => ({
@@ -253,14 +233,12 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
             }
           }
         } else {
-          // Se mudou para open_text, remover todas as alternativas
           await supabase
             .from('alternatives')
             .delete()
             .eq('question_id', question.id)
         }
       } else {
-        // Criar nova pergunta
         const { data: newQuestion, error: questionError } = await supabase
           .from('questions')
           .insert({
@@ -279,7 +257,7 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
           return
         }
 
-        // Inserir alternativas se não for open_text
+
         if (formData.type !== 'open_text') {
           const alternativesToInsert = alternatives
             .filter(alt => alt.text.trim())
@@ -306,14 +284,14 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
       toast.success(question ? 'Pergunta atualizada com sucesso!' : 'Pergunta criada com sucesso!')
       onSave()
       onClose()
-    } catch (error) {
+    } catch {
       toast.error('Erro inesperado')
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Injetar CSS dinâmico para forçar tela cheia
+
   React.useEffect(() => {
     if (isOpen) {
       const style = document.createElement('style')
@@ -362,7 +340,7 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
         }}
       >
         <div className="flex flex-col h-screen w-screen overflow-hidden">
-          {/* Header Fixo */}
+
           <div className="px-6 py-4 border-b bg-background flex-shrink-0">
             <div className="flex items-center justify-between">
               <div>
@@ -384,10 +362,10 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
             </div>
           </div>
 
-          {/* Conteúdo Scrollável */}
+
           <div className="flex-1 overflow-y-auto">
             <div className="px-6 py-6 space-y-6">
-            {/* Informações Básicas */}
+
             <Card>
               <CardHeader>
                 <CardTitle>Informações Básicas</CardTitle>
@@ -446,7 +424,7 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
               </CardContent>
             </Card>
 
-            {/* Alternativas */}
+
             {formData.type !== 'open_text' && (
               <Card>
                 <CardHeader>
@@ -496,7 +474,7 @@ export function QuestionFormModal({ isOpen, onClose, onSave, question }: Questio
             </div>
           </div>
 
-          {/* Footer Fixo */}
+
           <div className="px-6 py-4 border-t flex justify-end gap-3 bg-background flex-shrink-0">
             <Button variant="outline" onClick={onClose}>
               Cancelar

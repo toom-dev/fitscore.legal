@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { AdminSidebar } from "@/src/components/admin/admin-sidebar"
 import { ThemeToggle } from "@/src/components/theme-toggle"
+import { NotificationBell } from "@/src/components/admin/notifications"
+import { useNotifications } from "@/lib/hooks/useNotifications"
 import { Button } from "@/src/components/ui/button"
 import { Menu, X } from "lucide-react"
 
@@ -12,15 +14,23 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    refresh
+  } = useNotifications()
 
   return (
     <div className="flex min-h-screen w-full bg-gradient-to-br from-background via-background to-muted/20">
-      {/* Sidebar Desktop */}
+
       <div className="hidden lg:block sticky top-0 h-screen">
         <AdminSidebar />
       </div>
 
-      {/* Sidebar Mobile - Overlay */}
+
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div 
@@ -43,13 +53,13 @@ export default function AdminLayout({
         </div>
       )}
 
-      {/* Main Content */}
+
       <main className="flex-1 min-w-0">
-        {/* Header */}
+
         <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="container mx-auto flex h-16 max-w-screen-2xl items-center justify-between px-4">
             <div className="flex items-center space-x-4">
-              {/* Mobile menu button */}
+
               <Button
                 variant="ghost"
                 size="sm"
@@ -67,12 +77,20 @@ export default function AdminLayout({
             </div>
             
             <div className="flex items-center space-x-4">
+              <NotificationBell
+                notifications={notifications}
+                unreadCount={unreadCount}
+                onMarkAsRead={markAsRead}
+                onMarkAllAsRead={markAllAsRead}
+                onDelete={deleteNotification}
+                onRefresh={refresh}
+              />
               <ThemeToggle />
             </div>
           </div>
         </header>
 
-        {/* Page Content */}
+
         <div className="container mx-auto max-w-screen-2xl p-4 md:p-6 lg:p-8">
           {children}
         </div>

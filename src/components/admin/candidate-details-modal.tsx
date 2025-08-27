@@ -25,7 +25,7 @@ import {
   Award,
   MessageSquare,
   Target,
-  Loader2,
+  // Loader2,
   X
 } from 'lucide-react'
 
@@ -66,7 +66,6 @@ export function CandidateDetailsModal({ candidate, isOpen, onClose }: CandidateD
   const [isLoading, setIsLoading] = useState(false)
   const supabase = createClient()
 
-  // CSS para garantir modal em tela cheia
   React.useEffect(() => {
     if (isOpen) {
       const style = document.createElement('style')
@@ -111,40 +110,30 @@ export function CandidateDetailsModal({ candidate, isOpen, onClose }: CandidateD
     try {
       setIsLoading(true)
       
-      console.log('🔍 Carregando respostas para candidato:', candidate.id, candidate.name)
-      
-      // Primeiro, buscar apenas as respostas básicas
+
       const { data: answersData, error: answersError } = await supabase
         .from('answers')
         .select('*')
         .eq('candidate_id', candidate.id)
         .order('created_at', { ascending: true })
 
-      console.log('📝 Respostas encontradas:', answersData?.length || 0)
-      console.log('❌ Erro nas respostas:', answersError)
-
       if (answersError) {
-        console.error('Erro ao carregar respostas:', answersError)
         return
       }
 
       if (!answersData || answersData.length === 0) {
-        console.log('⚠️ Nenhuma resposta encontrada para este candidato')
         setAnswers([])
         return
       }
 
-      // Buscar perguntas separadamente
+
       const questionIds = [...new Set(answersData.map(a => a.question_id))]
       const { data: questionsData, error: questionsError } = await supabase
         .from('questions')
         .select('*')
         .in('id', questionIds)
 
-      console.log('❓ Perguntas encontradas:', questionsData?.length || 0)
-      console.log('❌ Erro nas perguntas:', questionsError)
 
-      // Buscar alternativas separadamente (apenas para respostas que têm alternative_id)
       const alternativeIds = answersData
         .filter(a => a.alternative_id)
         .map(a => a.alternative_id)
@@ -155,14 +144,12 @@ export function CandidateDetailsModal({ candidate, isOpen, onClose }: CandidateD
           .from('alternatives')
           .select('*')
           .in('id', alternativeIds)
-        
-        console.log('🔘 Alternativas encontradas:', altData?.length || 0)
-        console.log('❌ Erro nas alternativas:', altError)
+
         
         alternativesData = altData || []
       }
 
-      // Combinar os dados e agrupar múltiplas escolhas
+
       const answersMap = new Map<string, CandidateAnswer>()
       
       answersData.forEach(answer => {
@@ -172,10 +159,8 @@ export function CandidateDetailsModal({ candidate, isOpen, onClose }: CandidateD
         const questionKey = answer.question_id
         
         if (answersMap.has(questionKey)) {
-          // Pergunta já existe - é múltipla escolha
           const existingAnswer = answersMap.get(questionKey)!
           
-          // Adicionar alternativa ao array
           if (!existingAnswer.multipleAlternatives) {
             existingAnswer.multipleAlternatives = existingAnswer.alternative ? [existingAnswer.alternative] : []
           }
@@ -184,11 +169,9 @@ export function CandidateDetailsModal({ candidate, isOpen, onClose }: CandidateD
             existingAnswer.multipleAlternatives.push(alternative)
           }
           
-          // Somar score
           existingAnswer.score += answer.score
           
         } else {
-          // Nova pergunta
           const formattedAnswer: CandidateAnswer = {
             id: answer.id,
             question_id: answer.question_id,
@@ -212,11 +195,9 @@ export function CandidateDetailsModal({ candidate, isOpen, onClose }: CandidateD
       })
 
       const formattedAnswers = Array.from(answersMap.values())
-      console.log('✅ Respostas formatadas:', formattedAnswers.length)
       setAnswers(formattedAnswers)
       
     } catch (error) {
-      console.error('Erro inesperado:', error)
     } finally {
       setIsLoading(false)
     }
@@ -316,7 +297,7 @@ export function CandidateDetailsModal({ candidate, isOpen, onClose }: CandidateD
           <div className="flex-1 overflow-y-auto px-6 py-6">
 
         <div className="space-y-6">
-          {/* Informações Pessoais */}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -365,7 +346,7 @@ export function CandidateDetailsModal({ candidate, isOpen, onClose }: CandidateD
             </CardContent>
           </Card>
 
-          {/* Resultado do Fit Score */}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -404,7 +385,7 @@ export function CandidateDetailsModal({ candidate, isOpen, onClose }: CandidateD
             </CardContent>
           </Card>
 
-          {/* Respostas por Categoria */}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -465,7 +446,7 @@ export function CandidateDetailsModal({ candidate, isOpen, onClose }: CandidateD
                                     <div className="text-sm">
                                       <span className="font-medium">Respostas (múltipla escolha):</span>
                                       <ul className="mt-1 space-y-1">
-                                        {answer.multipleAlternatives.map((alt, idx) => (
+                                        {answer.multipleAlternatives.map((alt) => (
                                           <li key={alt.id} className="flex items-center gap-2">
                                             <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0"></span>
                                             {alt.text}

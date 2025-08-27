@@ -3,16 +3,18 @@
 import { useState } from "react"
 import { Button } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
-import { Input } from "@/src/components/ui/input"
-import { Label } from "@/src/components/ui/label"
+import { FormInput } from "@/src/components/ui/form-input"
 import { ChevronLeft, ChevronRight, Check, Loader2 } from "lucide-react"
 import { ThemeToggle } from "@/src/components/theme-toggle"
 import { Logo } from "@/src/components/logo"
 import { useFormData } from "@/lib/hooks/useFormData"
+import { useFormValidation } from "@/lib/hooks/useFormValidation"
 import { DynamicQuestion } from "@/src/components/dynamic-question"
+import { AnswersSummary } from "@/src/components/answers-summary"
 import { submitForm } from "@/lib/services/submission"
 import { SubmissionResponse } from "@/lib/types/database"
 import { formatPhoneMask, removePhoneMask } from "@/lib/schemas/form-validation"
+import { z } from "zod"
 
 export default function MultiStepForm() {
   const {
@@ -21,36 +23,44 @@ export default function MultiStepForm() {
     isLoading,
     isTransitioning,
     formData,
-    setCurrentStep,
+
     nextStep,
     prevStep,
     updateAnswer,
     updateCandidateInfo,
     isStepCompleted,
     canProceed,
-    getTotalQuestions,
+
     isFormValid,
     validateCurrentStep
   } = useFormData()
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submissionResult, setSubmissionResult] = useState<SubmissionResponse | null>(null)
+  
+
+  const { getFieldError, validateField } = useFormValidation()
+
+
+  const nameSchema = z.string().min(2, "Nome deve ter pelo menos 2 caracteres")
+  const emailSchema = z.string().email("Email inválido")
+  const phoneSchema = z.string().min(10, "Telefone deve ter pelo menos 10 dígitos")
 
   const handleSubmit = async () => {
     if (!canProceed() || isSubmitting) return
 
-    // Usar validação mais robusta com Zod
+
     const validation = isFormValid()
     if (!validation.isValid) {
       const errorMessage = validation.errors?.join('\n') || validation.message
-      alert(`Formulário inválido:\n${errorMessage}`)
+      toast.error(`Formulário inválido: ${errorMessage}`)
       return
     }
 
-    // Validar step atual antes de enviar
+
     const stepValidation = validateCurrentStep()
     if (!stepValidation.isValid) {
-      alert(`Erros no formulário:\n${stepValidation.errors.join('\n')}`)
+      toast.error(`Erros no formulário: ${stepValidation.errors.join(', ')}`)
       return
     }
 
@@ -58,14 +68,14 @@ export default function MultiStepForm() {
       setIsSubmitting(true)
       const result = await submitForm(formData)
       
-      // Se a submissão falhou com erros de validação, mostrar detalhes
+
       if (!result.success && result.errors) {
-        console.error('Erros de validação:', result.errors)
+
       }
       
       setSubmissionResult(result)
     } catch (error) {
-      console.error('Erro na submissão:', error)
+
       setSubmissionResult({
         success: false,
         message: 'Erro inesperado. Tente novamente.',
@@ -76,10 +86,10 @@ export default function MultiStepForm() {
     }
   }
 
-  // Mostrar resultado da submissão
+
   if (submissionResult) {
     return (
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <Logo size="lg" className="justify-center mb-6" />
           <Card className="shadow-xl border-0">
@@ -96,7 +106,7 @@ export default function MultiStepForm() {
                     {submissionResult.message}
                   </p>
                   {submissionResult.fit_score !== undefined && (
-                    <div className="bg-muted rounded-lg p-4 mb-4">
+                    <div className="bg-muted rounded-lg p-4 mb-6">
                       <p className="text-sm text-muted-foreground mb-1">Seu FitScore</p>
                       <p className="text-3xl font-bold text-primary">
                         {submissionResult.fit_score}
@@ -146,11 +156,29 @@ export default function MultiStepForm() {
             </CardContent>
           </Card>
         </div>
+
+
+        {submissionResult.success && (
+          <div className="mt-8">
+            <AnswersSummary formData={formData} steps={steps} />
+            
+
+            <div className="text-center mt-8">
+              <Button 
+                onClick={() => window.location.reload()}
+                variant="outline"
+                className="bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 border-primary/20 hover:border-primary/30"
+              >
+                Fazer Nova Avaliação
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
 
-  // Tela de loading
+
   if (isLoading) {
     return (
       <div className="max-w-2xl mx-auto">
@@ -165,7 +193,7 @@ export default function MultiStepForm() {
     )
   }
 
-  // Se não há steps, mostrar erro
+
   if (steps.length === 0) {
     return (
       <div className="max-w-2xl mx-auto">
@@ -182,7 +210,7 @@ export default function MultiStepForm() {
   const currentStepData = steps[currentStep - 1]
 
   const renderStepIndicator = () => {
-    // Criar array de steps incluindo informações pessoais como primeiro step
+
     const allSteps = [
       { title: 'Dados', category: 'pessoais' },
       ...steps
@@ -255,16 +283,13 @@ export default function MultiStepForm() {
   }
 
   const renderCurrentStep = () => {
-    // Step 0: Informações pessoais
     if (currentStep === 0) {
       return renderCandidateInfoStep()
     }
-    
-    // Steps 1+: Perguntas do questionário
     return renderQuestionsStep()
   }
 
-  // Step especial para informações do candidato (primeiro step se não existir no banco)
+
   const renderCandidateInfoStep = () => (
     <div className={`transform transition-all duration-300 ease-in-out ${
       isTransitioning 
@@ -272,49 +297,74 @@ export default function MultiStepForm() {
         : 'opacity-100 translate-x-0 scale-100'
     }`}>
       <div className="space-y-6">
-        <div className="space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <Label htmlFor="candidate-name" className="text-base font-semibold">
-            Nome completo <span className="text-red-500">*</span>
-          </Label>
-          <Input
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <FormInput
             id="candidate-name"
             type="text"
+            label="Nome completo"
             placeholder="Digite seu nome completo"
             value={formData.candidate.name}
-            onChange={(e) => updateCandidateInfo({ name: e.target.value })}
+            onChange={(e) => {
+              const value = e.target.value
+              updateCandidateInfo({ name: value })
+
+              validateField('name', value, nameSchema)
+            }}
+            onBlur={(e) => {
+
+              validateField('name', e.target.value, nameSchema)
+            }}
+            error={getFieldError('name')}
+            required
             className="w-full transition-all duration-300 focus:scale-[1.02] focus:shadow-lg focus:border-primary/50 hover:border-primary/30"
           />
         </div>
 
-        <div className="space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '100ms' }}>
-          <Label htmlFor="candidate-email" className="text-base font-semibold">
-            E-mail <span className="text-red-500">*</span>
-          </Label>
-          <Input
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '100ms' }}>
+          <FormInput
             id="candidate-email"
             type="email"
+            label="E-mail"
             placeholder="Digite seu e-mail"
             value={formData.candidate.email}
-            onChange={(e) => updateCandidateInfo({ email: e.target.value })}
+            onChange={(e) => {
+              const value = e.target.value
+              updateCandidateInfo({ email: value })
+
+              validateField('email', value, emailSchema)
+            }}
+            onBlur={(e) => {
+
+              validateField('email', e.target.value, emailSchema)
+            }}
+            error={getFieldError('email')}
+            required
             className="w-full transition-all duration-300 focus:scale-[1.02] focus:shadow-lg focus:border-primary/50 hover:border-primary/30"
           />
         </div>
 
-        <div className="space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '200ms' }}>
-          <Label htmlFor="candidate-phone" className="text-base font-semibold">
-            Telefone <span className="text-red-500">*</span>
-          </Label>
-          <Input
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '200ms' }}>
+          <FormInput
             id="candidate-phone"
             type="tel"
+            label="Telefone"
             placeholder="(12) 1 1234-1234"
             value={formatPhoneMask(formData.candidate.phone || '')}
             onChange={(e) => {
               const formatted = formatPhoneMask(e.target.value)
               const unmasked = removePhoneMask(formatted)
               updateCandidateInfo({ phone: unmasked })
+
+              validateField('phone', unmasked, phoneSchema)
             }}
-            maxLength={16} // Máximo de caracteres incluindo a máscara
+            onBlur={(e) => {
+
+              const unmasked = removePhoneMask(e.target.value)
+              validateField('phone', unmasked, phoneSchema)
+            }}
+            error={getFieldError('phone')}
+            required
+            maxLength={16}
             className="w-full transition-all duration-300 focus:scale-[1.02] focus:shadow-lg focus:border-primary/50 hover:border-primary/30"
           />
         </div>
@@ -322,9 +372,8 @@ export default function MultiStepForm() {
     </div>
   )
 
-  // Calcular steps e navegação considerando step inicial de informações pessoais
-  const totalSteps = steps.length + 1 // +1 para incluir o step de informações pessoais
-  const isLastStep = currentStep === totalSteps - 1 // Último step é steps.length (baseado em 0)
+  const totalSteps = steps.length + 1
+  const isLastStep = currentStep === totalSteps - 1
 
   return (
     <div className="max-w-2xl mx-auto">

@@ -1,14 +1,12 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { StepData, FormData as FormDataType, FormAnswer, QuestionWithAlternatives } from '@/lib/types/database'
+import { StepData, FormData as FormDataType, FormAnswer } from '@/lib/types/database'
 import { getQuestionsForForm } from '@/lib/services/questions'
 import { calculateAnswerScore, validateCompleteForm } from '@/lib/services/submission'
 import { 
   validateCandidate, 
-  validateFormAnswer, 
-  validateFormData,
-  errorMessages 
+  validateFormAnswer
 } from '@/lib/schemas/form-validation'
 
 interface UseFormDataReturn {
@@ -73,7 +71,7 @@ export function useFormData(): UseFormDataReturn {
           answers: initialAnswers
         }))
       } catch (error) {
-        console.error('Erro ao carregar perguntas:', error)
+
       } finally {
         setIsLoading(false)
       }
@@ -121,7 +119,6 @@ export function useFormData(): UseFormDataReturn {
       // Validar a resposta antes de salvar
       const validation = validateFormAnswer(newAnswer)
       if (!validation.success) {
-        console.warn('Resposta inválida:', validation.error.errors)
         // Ainda assim vamos salvar para não quebrar a UX, mas loggar o erro
       }
 
@@ -152,7 +149,6 @@ export function useFormData(): UseFormDataReturn {
       // Validar dados do candidato
       const validation = validateCandidate(updatedCandidate)
       if (!validation.success) {
-        console.warn('Dados do candidato inválidos:', validation.error.errors)
         // Ainda assim vamos salvar para não quebrar a UX, mas loggar o erro
       }
 
@@ -228,7 +224,7 @@ export function useFormData(): UseFormDataReturn {
       // Validar informações pessoais
       const candidateValidation = validateCandidate(formData.candidate)
       if (!candidateValidation.success) {
-        candidateValidation.error.errors.forEach(err => {
+        candidateValidation.error.issues.forEach(err => {
           errors.push(`${err.path.join('.')}: ${err.message}`)
         })
       }
@@ -247,7 +243,7 @@ export function useFormData(): UseFormDataReturn {
 
           const answerValidation = validateFormAnswer(answer)
           if (!answerValidation.success) {
-            answerValidation.error.errors.forEach(err => {
+            answerValidation.error.issues.forEach(err => {
               errors.push(`Pergunta "${question.title}" - ${err.message}`)
             })
           }
@@ -280,7 +276,7 @@ export function useFormData(): UseFormDataReturn {
 
         // Validar pontuação calculada
         if (typeof score !== 'number' || score < 0) {
-          console.warn(`Pontuação inválida calculada para pergunta ${question.id}: ${score}`)
+
           return { ...answer, score: 0 }
         }
 

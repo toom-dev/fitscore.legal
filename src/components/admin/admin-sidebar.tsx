@@ -2,11 +2,13 @@
 
 import { Logo } from "@/src/components/logo"
 import { Button } from "@/src/components/ui/button"
-import { Card, CardContent, CardHeader } from "@/src/components/ui/card"
+
 import { 
   BarChart3, 
   Users, 
   HelpCircle, 
+  Bell,
+  FileText,
   Home
 } from "lucide-react"
 import Link from "next/link"
@@ -31,6 +33,18 @@ const menuItems = [
     url: "/admin/perguntas",
     icon: HelpCircle,
     description: "Configurar questões"
+  },
+  {
+    title: "Notificações",
+    url: "/admin/notificacoes",
+    icon: Bell,
+    description: "Alertas do sistema"
+  },
+  {
+    title: "Relatórios",
+    url: "/admin/relatorios",
+    icon: FileText,
+    description: "Relatórios automáticos"
   },
 ]
 

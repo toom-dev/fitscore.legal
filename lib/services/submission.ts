@@ -1,26 +1,46 @@
 import { createClient } from '@/lib/supabase/client'
-import { FormData, FormAnswer, calculateFitLabel, SubmissionResponse } from '@/lib/types/database'
+import { FormData, calculateFitLabel, SubmissionResponse } from '@/lib/types/database'
 import { 
   validateFormData, 
-  validateCandidate, 
   validateFormAnswer,
   sanitizeCandidate,
   validateMultipleChoiceLimit 
 } from '@/lib/schemas/form-validation'
+import { NotificationService } from '@/lib/services/notifications'
+import { toast } from 'sonner'
 
 const supabase = createClient()
 
-/**
- * Submete o formulário completo e calcula a pontuação
- */
+async function updateCandidateCompletion(
+  candidateId: string, 
+  totalScore: number, 
+  fitLabel: string
+): Promise<boolean> {
+  const { data: candidate, error } = await supabase
+    .from('candidates')
+    .update({
+      fit_score: totalScore,
+      fit_label: fitLabel,
+      completed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', candidateId)
+
+  if (error) {
+    return false
+  }
+
+  return true
+}
+
 export async function submitForm(formData: FormData): Promise<SubmissionResponse> {
   try {
-    // 1. Validar dados do formulário completo
     const formValidation = validateFormData(formData)
     if (!formValidation.success) {
-      const errors = formValidation.error.errors.map(err => 
+      const errors = formValidation.error.issues.map(err => 
         `${err.path.join('.')}: ${err.message}`
       )
+      toast.error('Dados do formulário inválidos')
       return {
         success: false,
         message: 'Dados do formulário inválidos',
@@ -28,21 +48,22 @@ export async function submitForm(formData: FormData): Promise<SubmissionResponse
       }
     }
 
-    // 2. Sanitizar dados do candidato
+
     const candidateData = sanitizeCandidate(formData.candidate)
     if (!candidateData) {
+      toast.error('Dados do candidato inválidos')
       return {
         success: false,
         message: 'Dados do candidato inválidos'
       }
     }
 
-    // 3. Validar cada resposta individualmente
+
     const validationErrors: string[] = []
     for (const [index, answer] of formData.answers.entries()) {
       const answerValidation = validateFormAnswer(answer)
       if (!answerValidation.success) {
-        const errors = answerValidation.error.errors.map(err => 
+        const errors = answerValidation.error.issues.map(err => 
           `Resposta ${index + 1} - ${err.path.join('.')}: ${err.message}`
         )
         validationErrors.push(...errors)
@@ -50,6 +71,7 @@ export async function submitForm(formData: FormData): Promise<SubmissionResponse
     }
 
     if (validationErrors.length > 0) {
+      toast.error('Algumas respostas são inválidas')
       return {
         success: false,
         message: 'Algumas respostas são inválidas',
@@ -57,7 +79,7 @@ export async function submitForm(formData: FormData): Promise<SubmissionResponse
       }
     }
 
-    // 4. Criar o candidato
+
     const { data: candidate, error: candidateError } = await supabase
       .from('candidates')
       .insert(candidateData)
@@ -65,29 +87,30 @@ export async function submitForm(formData: FormData): Promise<SubmissionResponse
       .single()
 
     if (candidateError || !candidate) {
-      console.error('Erro ao criar candidato:', candidateError)
-      
       // Verificar se é erro de duplicação de email
       if (candidateError?.code === '23505' && candidateError?.details?.includes('email')) {
+        toast.error('Este e-mail já foi utilizado. Tente com outro e-mail.')
         return {
           success: false,
           message: 'Este e-mail já foi utilizado. Tente com outro e-mail.'
         }
       }
       
+      toast.error('Erro ao salvar dados do candidato. Verifique os dados e tente novamente.')
       return {
         success: false,
         message: 'Erro ao salvar dados do candidato. Verifique os dados e tente novamente.'
       }
     }
 
-    // 5. Validar e calcular pontuação total
+
     let totalScore = 0
     const answersToInsert = []
     
     for (const answer of formData.answers) {
-      // Validar pontuação
+
       if (typeof answer.score !== 'number' || answer.score < 0) {
+        toast.error('Pontuação inválida detectada')
         return {
           success: false,
           message: 'Pontuação inválida detectada'
@@ -96,21 +119,21 @@ export async function submitForm(formData: FormData): Promise<SubmissionResponse
       
       totalScore += answer.score
       
-      // Tratar múltipla escolha: criar um registro para cada alternativa selecionada
+
       if (Array.isArray(answer.alternative_id)) {
-        // Múltipla escolha - criar registro para cada alternativa
+
         for (const altId of answer.alternative_id) {
           const answerData = {
             candidate_id: candidate.id,
             question_id: answer.question_id,
             alternative_id: altId,
             text_answer: null,
-            score: Math.round(answer.score / answer.alternative_id.length) // Dividir score entre as alternativas
+            score: Math.round(answer.score / answer.alternative_id.length)
           }
           answersToInsert.push(answerData)
         }
       } else {
-        // Escolha única ou texto
+
         const answerData = {
           candidate_id: candidate.id,
           question_id: answer.question_id,
@@ -122,50 +145,45 @@ export async function submitForm(formData: FormData): Promise<SubmissionResponse
       }
     }
     
-    // Validar pontuação total
+
     if (totalScore < 0 || totalScore > 200) {
+      toast.error('Pontuação total inválida')
       return {
         success: false,
         message: 'Pontuação total inválida'
       }
     }
 
-    // 6. Salvar respostas
+
     const { error: answersError } = await supabase
       .from('answers')
       .insert(answersToInsert)
 
     if (answersError) {
-      console.error('Erro ao salvar respostas:', answersError)
+
       
-      // Tentar rollback do candidato em caso de erro
+
       await supabase.from('candidates').delete().eq('id', candidate.id)
       
+      toast.error('Erro ao salvar respostas. Tente novamente.')
       return {
         success: false,
         message: 'Erro ao salvar respostas. Tente novamente.'
       }
     }
 
-    // 7. Calcular classificação e atualizar candidato
-    const fitLabel = calculateFitLabel(totalScore)
+    const fitLabel = calculateFitLabel(totalScore);
     
-    const { error: updateError } = await supabase
-      .from('candidates')
-      .update({
-        fit_score: totalScore,
-        fit_label: fitLabel,
-        completed_at: new Date().toISOString()
-      })
-      .eq('id', candidate.id)
+    const updateSuccess = await updateCandidateCompletion(
+      candidate.id,
+      totalScore,
+      fitLabel
+    )
 
-    if (updateError) {
-      console.error('Erro ao atualizar pontuação:', updateError)
-      return {
-        success: false,
-        message: 'Erro ao calcular pontuação final. Tente novamente.'
-      }
+    if (!updateSuccess) {
+
     }
+    toast.success('Formulário enviado com sucesso!')
 
     return {
       success: true,
@@ -176,7 +194,8 @@ export async function submitForm(formData: FormData): Promise<SubmissionResponse
     }
 
   } catch (error) {
-    console.error('Erro inesperado na submissão:', error)
+
+    toast.error('Erro inesperado. Tente novamente mais tarde.')
     return {
       success: false,
       message: 'Erro inesperado. Tente novamente mais tarde.'
@@ -184,16 +203,11 @@ export async function submitForm(formData: FormData): Promise<SubmissionResponse
   }
 }
 
-/**
- * Calcula pontuação de uma resposta baseada no tipo da pergunta
- */
-/**
- * Calcula pontuação de uma resposta com validação Zod
- */
+
 export function calculateAnswerScore(
   questionType: string,
   alternativeId?: string | string[],
-  alternatives: any[] = [],
+  alternatives: Array<{ id: string; value: number }> = [],
   textAnswer?: string
 ): number {
   if (!alternativeId && !textAnswer) return 0
@@ -206,7 +220,7 @@ export function calculateAnswerScore(
         
         // Validar se a pontuação é válida
         if (typeof score !== 'number' || score < 0 || score > 100) {
-          console.warn(`Pontuação inválida para alternativa ${alternativeId}: ${score}`)
+
           return 0
         }
         
@@ -219,7 +233,7 @@ export function calculateAnswerScore(
         // Validar limite de seleções
         const limitValidation = validateMultipleChoiceLimit(alternativeId, 10)
         if (!limitValidation.success) {
-          console.warn(`Multiple choice inválido: ${limitValidation.error}`)
+
           return 0
         }
         
@@ -251,7 +265,7 @@ export function calculateAnswerScore(
       return 10                   // Resposta completa
 
     default:
-      console.warn(`Tipo de pergunta desconhecido: ${questionType}`)
+
       return 0
   }
 }
@@ -283,7 +297,7 @@ export function validateFormDataLegacy(formData: FormData, totalQuestions: numbe
   // Usar validação Zod primeiro
   const zodValidation = validateFormData(formData)
   if (!zodValidation.success) {
-    const firstError = zodValidation.error.errors[0]
+    const firstError = zodValidation.error.issues[0]
     return { 
       isValid: false, 
       message: `${firstError.path.join('.')}: ${firstError.message}` 
@@ -325,7 +339,7 @@ export function validateCompleteForm(formData: FormData, totalQuestions: number)
   const zodValidation = validateFormData(formData)
   
   if (!zodValidation.success) {
-    const errors = zodValidation.error.errors.map(err => 
+    const errors = zodValidation.error.issues.map(err => 
       `${err.path.join('.')}: ${err.message}`
     )
     

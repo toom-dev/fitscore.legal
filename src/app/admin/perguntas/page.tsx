@@ -4,10 +4,12 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { Button } from "@/src/components/ui/button"
 import { Badge } from "@/src/components/ui/badge"
-import { createClient } from '@/lib/supabase/client'
+import { ApiService } from '@/lib/services/api'
 import { QuestionWithAlternatives } from '@/lib/types/database'
 import { QuestionFormModal } from '@/src/components/admin/question-form-modal'
-import { Loader2, HelpCircle, Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react'
+import { QuestionsSkeleton } from '@/src/components/admin/skeletons'
+import { HelpCircle, Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function PerguntasPage() {
   const [questions, setQuestions] = useState<QuestionWithAlternatives[]>([])
@@ -24,8 +26,6 @@ export default function PerguntasPage() {
     }
   })
 
-  const supabase = createClient()
-
   useEffect(() => {
     loadQuestions()
   }, [])
@@ -34,70 +34,19 @@ export default function PerguntasPage() {
     try {
       setIsLoading(true)
       
-      console.log('🔍 Carregando perguntas...')
+      const response = await ApiService.getQuestions()
       
-      // Tentar primeiro a view questions_with_alternatives
-      const { data: viewData, error: viewError } = await supabase
-        .from('questions_with_alternatives')
-        .select('*')
-        .order('category', { ascending: true })
-        .order('order_index', { ascending: true })
-
-      console.log('📊 View data:', viewData)
-      console.log('❌ View error:', viewError)
-
-      if (viewError) {
-        console.warn('⚠️ View falhou, usando query direta...')
-        
-        // Fallback: buscar perguntas e alternativas separadamente
-        const { data: questionsData, error: questionsError } = await supabase
-          .from('questions')
-          .select('*')
-          .order('category', { ascending: true })
-          .order('order_index', { ascending: true })
-
-        console.log('❓ Questions data:', questionsData)
-        console.log('❌ Questions error:', questionsError)
-
-        if (questionsError) {
-          console.error('Erro ao carregar perguntas:', questionsError)
-          return
-        }
-
-        // Para cada pergunta, buscar suas alternativas
-        const questionsWithAlternatives = await Promise.all(
-          (questionsData || []).map(async (question) => {
-            const { data: alternatives, error: altError } = await supabase
-              .from('alternatives')
-              .select('*')
-              .eq('question_id', question.id)
-              .order('order_index', { ascending: true })
-
-            if (altError) {
-              console.warn(`⚠️ Erro ao buscar alternativas para ${question.title}:`, altError)
-            }
-
-            return {
-              ...question,
-              alternatives: alternatives || []
-            }
-          })
-        )
-
-        setQuestions(questionsWithAlternatives)
-      } else {
-        console.log('✅ Dados da view:', viewData?.length, 'perguntas')
-        setQuestions(viewData || [])
+      if (response.success && response.data) {
+        setQuestions(response.data.questions)
       }
       
     } catch (error) {
-      console.error('Erro inesperado:', error)
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Função separada para calcular estatísticas
+
   useEffect(() => {
     if (questions.length > 0) {
       const total = questions.length
@@ -114,20 +63,17 @@ export default function PerguntasPage() {
 
   const toggleQuestionStatus = async (questionId: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('questions')
-        .update({ is_active: !currentStatus })
-        .eq('id', questionId)
+      const response = await ApiService.toggleQuestionStatus(questionId, !currentStatus)
 
-      if (error) {
-        console.error('Erro ao alterar status:', error)
+      if (!response.success) {
+        toast.error(`Erro ao ${currentStatus ? 'desativar' : 'ativar'} pergunta: ${response.error}`)
         return
       }
 
-      // Recarregar perguntas
+      toast.success(`Pergunta ${currentStatus ? 'desativada' : 'ativada'} com sucesso`)
       loadQuestions()
     } catch (error) {
-      console.error('Erro inesperado:', error)
+      toast.error('Erro inesperado. Tente novamente.')
     }
   }
 
@@ -137,22 +83,17 @@ export default function PerguntasPage() {
     }
 
     try {
-      const { error } = await supabase
-        .from('questions')
-        .delete()
-        .eq('id', questionId)
+      const response = await ApiService.deleteQuestion(questionId)
 
-      if (error) {
-        console.error('Erro ao excluir pergunta:', error)
-        alert('Erro ao excluir pergunta. Tente novamente.')
+      if (!response.success) {
+        toast.error(`Erro ao excluir pergunta: ${response.error}`)
         return
       }
 
-      // Recarregar perguntas
+      toast.success('Pergunta excluída com sucesso')
       loadQuestions()
     } catch (error) {
-      console.error('Erro inesperado:', error)
-      alert('Erro inesperado. Tente novamente.')
+      toast.error('Erro inesperado. Tente novamente.')
     }
   }
 
@@ -203,19 +144,12 @@ export default function PerguntasPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="flex items-center space-x-2">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          <span className="text-muted-foreground">Carregando perguntas...</span>
-        </div>
-      </div>
-    )
+    return <QuestionsSkeleton />
   }
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent dark:from-white dark:to-gray-200">
@@ -232,57 +166,65 @@ export default function PerguntasPage() {
         </Button>
       </div>
 
-      {/* Estatísticas */}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
-            <HelpCircle className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-primary/10 rounded-full">
+              <HelpCircle className="h-4 w-4 text-primary" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">perguntas cadastradas</p>
+            <div className="text-3xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground mt-1">perguntas cadastradas</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Ativas</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-primary/10 rounded-full">
+              <Eye className="h-4 w-4 text-primary" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.active}</div>
-            <p className="text-xs text-muted-foreground">perguntas ativas</p>
+            <div className="text-3xl font-bold">{stats.active}</div>
+            <p className="text-xs text-muted-foreground mt-1">perguntas ativas</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Performance</CardTitle>
-            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+            <div className="p-2 bg-blue-500/10 rounded-full">
+              <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.byCategory.performance}</div>
-            <p className="text-xs text-muted-foreground">perguntas</p>
+            <div className="text-3xl font-bold">{stats.byCategory.performance}</div>
+            <p className="text-xs text-muted-foreground mt-1">perguntas</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Energia + Cultura</CardTitle>
-            <div className="flex space-x-1">
-              <div className="w-2 h-2 rounded-full bg-green-500"></div>
-              <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+            <div className="p-2 bg-primary/10 rounded-full flex items-center justify-center">
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.byCategory.energia + stats.byCategory.cultura}</div>
-            <p className="text-xs text-muted-foreground">perguntas</p>
+            <div className="text-3xl font-bold">{stats.byCategory.energia + stats.byCategory.cultura}</div>
+            <p className="text-xs text-muted-foreground mt-1">perguntas</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Lista de Perguntas por Categoria */}
+
       {['performance', 'energia', 'cultura'].map(category => {
         const categoryQuestions = questions.filter(q => q.category === category)
         
@@ -305,9 +247,9 @@ export default function PerguntasPage() {
             <CardContent>
               <div className="space-y-4">
                 {categoryQuestions.map((question) => (
-                  <div key={question.id} className="flex items-start justify-between p-4 border border-border rounded-lg hover:bg-muted/30 transition-colors">
+                  <div key={question.id} className="flex items-start justify-between p-6 border rounded-lg hover:bg-muted/30 transition-colors bg-card">
                     <div className="flex-1 pr-4">
-                      <div className="flex items-center space-x-3 mb-2">
+                      <div className="flex items-center space-x-3 mb-3">
                         <Badge className={getCategoryColor(question.category)}>
                           {getCategoryName(question.category)}
                         </Badge>
@@ -326,14 +268,23 @@ export default function PerguntasPage() {
                       )}
                       
                       {question.alternatives && question.alternatives.length > 0 && (
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                           <p className="text-xs font-medium text-muted-foreground">Alternativas:</p>
-                          {question.alternatives.map((alt) => (
-                            <div key={alt.id} className="text-xs text-muted-foreground flex justify-between">
-                              <span>• {alt.text}</span>
-                              <span className="font-mono bg-muted px-1 rounded">{alt.value}pts</span>
-                            </div>
-                          ))}
+                          <div className="space-y-1">
+                            {question.alternatives.map((alt, index) => (
+                              <div key={alt.id} className="flex items-center justify-between p-2 bg-muted/30 rounded text-xs">
+                                <div className="flex items-center space-x-2">
+                                  <span className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center text-primary font-medium text-xs">
+                                    {index + 1}
+                                  </span>
+                                  <span className="text-foreground">{alt.text}</span>
+                                </div>
+                                <Badge variant="secondary" className="text-xs">
+                                  {alt.value} pts
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -386,13 +337,15 @@ export default function PerguntasPage() {
 
       {questions.length === 0 && (
         <Card>
-          <CardContent className="text-center py-12">
-            <HelpCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
-            <h3 className="text-lg font-semibold mb-2">Nenhuma pergunta encontrada</h3>
-            <p className="text-muted-foreground mb-4">
-              Comece criando sua primeira pergunta para o questionário
+          <CardContent className="text-center py-16">
+            <div className="w-20 h-20 mx-auto mb-6 bg-muted rounded-full flex items-center justify-center">
+              <HelpCircle className="w-10 h-10 text-muted-foreground" />
+            </div>
+            <h3 className="text-xl font-semibold mb-3">Nenhuma pergunta encontrada</h3>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+              Comece criando sua primeira pergunta para o questionário. As perguntas são organizadas por categorias: Performance, Energia e Cultura.
             </p>
-            <Button onClick={openCreateModal}>
+            <Button onClick={openCreateModal} size="lg">
               <Plus className="w-4 h-4 mr-2" />
               Criar Primeira Pergunta
             </Button>
@@ -400,7 +353,7 @@ export default function PerguntasPage() {
         </Card>
       )}
 
-      {/* Modal de Criar/Editar Pergunta */}
+
       <QuestionFormModal
         isOpen={isModalOpen}
         onClose={closeModal}

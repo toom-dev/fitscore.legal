@@ -17,7 +17,7 @@ export async function getQuestionsForForm(): Promise<StepData[]> {
       .order('order_index')
 
     if (error) {
-      console.error('Erro ao buscar perguntas:', error)
+
       return []
     }
 
@@ -55,7 +55,7 @@ export async function getQuestionsForForm(): Promise<StepData[]> {
     return steps.filter(step => step.questions.length > 0)
 
   } catch (error) {
-    console.error('Erro inesperado ao buscar perguntas:', error)
+
     return []
   }
 }
@@ -72,14 +72,14 @@ export async function getQuestionById(id: string): Promise<QuestionWithAlternati
       .single()
 
     if (error || !data) {
-      console.error('Erro ao buscar pergunta:', error)
+
       return null
     }
 
     return data as QuestionWithAlternatives
 
   } catch (error) {
-    console.error('Erro inesperado ao buscar pergunta:', error)
+
     return null
   }
 }
@@ -97,14 +97,14 @@ export async function getQuestionsByCategory(category: 'performance' | 'energia'
       .order('order_index')
 
     if (error) {
-      console.error(`Erro ao buscar perguntas da categoria ${category}:`, error)
+
       return []
     }
 
     return (data || []) as QuestionWithAlternatives[]
 
   } catch (error) {
-    console.error(`Erro inesperado ao buscar perguntas da categoria ${category}:`, error)
+
     return []
   }
 }
