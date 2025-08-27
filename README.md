@@ -519,7 +519,7 @@ sequenceDiagram
 
 ### 1. Clone o Repositório
 ```bash
-git clone https://github.com/legal/fitscore.legal.git
+git clone https://github.com/toom-dev/fitscore.legal.git
 cd fitscore.legal
 ```
 
